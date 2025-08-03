@@ -2,35 +2,17 @@ services:
   hbase-pseudo:
     image: cbarrancoupo/hbase-pseudo
     container_name: hbase-pseudo
-      #environment:
-      # - PUID=1000
+    hostname: hbase-pseudo
     volumes:
       - /media/SHARED/repositories/BigDataProject/docker/services/hbase-pseudo/data:/data
     ports:
-      - 16010:16010
-      - 16301:16301
-      - 16302:16302
-      - 16303:16303
-      #- 32768:2181
-      #- 32769:8080
-      #- 32770:8085
-      #- 32771:9090
-      #- 32772:9095
-      #- 32773:13210
-      #- 32774:16000
-      #- 32775:16010
-      #- 32776:16012
-      #- 32777:16013
-      #- 32778:16014
-      #- 32779:16015
-      #- 32780:16201
-      #- 32781:16301
-      #- 32782:16302
-      #- 32783:16303
-      #- 32784:16304
-      #- 32785:16305
-      #- 32786:16306
-      #- 32787:16307
-      #- 32788:16308
-      #- 32789:16309
+      - 2181:2181
+      - 8080:8080
+      - 8085:8085
+      - 9090:9090
+      - 9095:9095
+      - 16000:16000 # master
+      - 16010:16010 # master-ui
+      - 16201-16210:16201-16210 # region servers
+      - 16301-16310:16301-16310 # region servers - ui
     restart: unless-stopped
