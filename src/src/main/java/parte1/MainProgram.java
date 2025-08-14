@@ -1,5 +1,7 @@
 package parte1;
 
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -9,8 +11,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-
-import org.apache.hadoop.hbase.client.Connection;
 
 public class MainProgram {
 
@@ -27,7 +27,45 @@ public class MainProgram {
 //            table.close();
 //        }
     	
-    	bootstrapping(2, 3);
+    	int f = 2; int c = 3;
+    	
+    	// Borramos todas las tablas
+    	dropTables();
+    	
+    	// Creamos la estructura de las tablas
+    	createTable(c);
+    	
+    	bootstrapping(f, c);
+    }
+    
+    private static void dropTables() throws IOException {
+    	
+    	try (Connection connection = HBaseConnector.getConnection()) {
+    		Admin admin = connection.getAdmin();
+    	
+    		for (TableName table : admin.listTableNames()) {
+    			admin.disableTable(table);
+				admin.deleteTable(table);
+			}
+	
+    	}
+    	
+    }
+    
+    private static void createTable(int measures) throws IOException {
+    	    	
+    	try (Connection connection = HBaseConnector.getConnection()) {
+    		Admin admin = connection.getAdmin();
+    	
+    		HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf("measure"));
+    		for (int m = 1; m <= measures; m++) {
+    			tableDescriptor.addFamily(new HColumnDescriptor(String.format("measure%d", m)));
+			}	
+    		
+    		// Creamos la tabla
+    		admin.createTable(tableDescriptor);
+    	}
+    	
     }
     
     /***
