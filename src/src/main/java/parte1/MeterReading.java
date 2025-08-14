@@ -1,5 +1,10 @@
 package parte1;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+
 public class MeterReading {
 	
 	private String Sensor;
@@ -29,10 +34,14 @@ public class MeterReading {
 		Sensor = sensor;
 	}
 
-	public String getDatetime() {
-		return Datetime;
+	public String getDay() {
+		return Datetime.split(" ")[0];
 	}
-
+	
+	public String getHHmm() {
+		return Datetime.split(" ")[1];
+	}
+	
 	public void setDatetime(String datetime) {
 		Datetime = datetime;
 	}
