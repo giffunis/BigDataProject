@@ -34,11 +34,10 @@ public class MainProgram {
 		// Creamos la estructura de las tablas
 		createTable(c);
 
-		bootstrapping(f, c);
-		
-		System.out.println("Terminada la escritura");
-		
-		
+		bootstrapping2(f, c);
+
+		System.out.println("Terminada la escritura"); //scan 'measure', { COLUMNS => ['measure3'], FILTER  => "PrefixFilter('3DG')"}
+
 	}
 
 	private static void dropTables() throws IOException {
@@ -119,14 +118,73 @@ public class MainProgram {
 		}
 
 	}
+
+	private static void bootstrapping2(int f, int c) throws IOException {
+		ArrayList<MeterReading> meterReadings = readCsv(csvFilepath, csvDelimiter);
+
+		try (Connection connection = HBaseConnector.getConnection()) {
+
+			BufferedMutator mutator = connection.getBufferedMutator(TableName.valueOf(TABLE_NAME));
+			ArrayList<Put> puts = new ArrayList<Put>();
+
+			for (MeterReading meterReading : meterReadings) {
+				for (int line = 1; line <= f; line++) {
+
+					Put put = new Put(Bytes
+							.toBytes(GetRowKey(line, meterReading)));
+
+					for (int col = 1; col <= c; col++) {
+						put.addColumn(Bytes.toBytes(String.format("%s%d", CF_MEASUREX, col)),
+								Bytes.toBytes(meterReading.getHHmm()), Bytes.toBytes(meterReading.getMeasure()));
+					}
+
+					puts.add(put);
+
+					if (puts.size() % 10000 == 0) {
+						System.out.println("Enviando 1000 rows al servidor");
+						mutator.mutate(puts);
+					    mutator.flush();
+						puts.clear();
+						System.out.println("Enviadas");
+					}
+				}
+			}
+
+			if (puts.size() % 10000 != 0) {
+				System.out.println("Enviando las últimas rows al servidor");
+				mutator.mutate(puts);
+			    mutator.flush();
+				puts.clear();
+				System.out.println("Enviadas");
+			}
+			}
+	}
 	
-	public static /*ArrayList<MeterReading>*/ void readFromHbase(int readC, int readF) throws IOException {
+	/**
+	 * Devuelve un bucket válido [0, buckets-1] usando hashCode().
+	 */
+	public static int computeBucket(String key, int buckets) {
+	    // Asegura que el hash sea positivo
+	    int rawHash = key.hashCode();
+	    int positiveHash = rawHash & Integer.MAX_VALUE;
+	    return positiveHash % buckets;
+	}
+	
+	private static String GetRowKey(int line, MeterReading mr) {
+		// Uso
+		int N = 3; // número de buckets
+		int bucket = computeBucket(line + mr.getSensor() + mr.getDatetime(), N); // 0..9
+		String rowKey = bucket + "#" + line + mr.getSensor() + "#" +mr.getDay();
+		return rowKey;
+	}
+
+	public static /* ArrayList<MeterReading> */ void readFromHbase(int readC, int readF) throws IOException {
 		try (Connection connection = HBaseConnector.getConnection()) {
 			Table table = connection.getTable(TableName.valueOf(TABLE_NAME));
-			
+
 			Scan scan = new Scan(Bytes.toBytes(String.format("%dDG", readF)));
 			scan.addColumn(Bytes.toBytes("personal"), Bytes.toBytes("givenName"));
-			scan.addFamily(Bytes.toBytes(String.format("%s%d",CF_MEASUREX, readC)));
+			scan.addFamily(Bytes.toBytes(String.format("%s%d", CF_MEASUREX, readC)));
 			ResultScanner scanner = table.getScanner(scan);
 //			for (Result result : scanner) {
 //			    result.

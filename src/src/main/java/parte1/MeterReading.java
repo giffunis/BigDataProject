@@ -45,6 +45,10 @@ public class MeterReading {
 	public void setDatetime(String datetime) {
 		Datetime = datetime;
 	}
+	
+	public String getDatetime() {
+		return Datetime;
+	}
 
 	public String getMeasure() {
 		return Measure;
