@@ -19,15 +19,14 @@ public class MainProgram {
 	private static final String CF_DATETIME = "datetime";
 	private static final String C_DATETIME_DAY = "day";
 	private static final String CF_MEASUREX = "measure";
-	
-	
+
 	private static String csvFilepath = "/media/SHARED/repositories/BigDataProject/doc/source/SET-dec-2013.csv";
 	private static String csvDelimiter = ",";
 
 	public static void main(String[] args) throws IOException {
 
-		int f = 1;
-		int c = 2;
+		int f = 5;
+		int c = 5;
 
 		// Borramos todas las tablas
 		dropTables();
@@ -36,6 +35,10 @@ public class MainProgram {
 		createTable(c);
 
 		bootstrapping(f, c);
+		
+		System.out.println("Terminada la escritura");
+		
+		
 	}
 
 	private static void dropTables() throws IOException {
@@ -47,7 +50,6 @@ public class MainProgram {
 				admin.disableTable(table);
 				admin.deleteTable(table);
 			}
-
 		}
 
 	}
@@ -56,17 +58,22 @@ public class MainProgram {
 
 		try (Connection connection = HBaseConnector.getConnection()) {
 			Admin admin = connection.getAdmin();
-
 			HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
 
-//			tableDescriptor.addFamily(new HColumnDescriptor(ROW_ID));
-//			tableDescriptor.addFamily(new HColumnDescriptor(CF_DATETIME));
 			for (int m = 1; m <= measures; m++) {
 				tableDescriptor.addFamily(new HColumnDescriptor(String.format("%s%d", CF_MEASUREX, m)));
 			}
 
-			// Creamos la tabla
-			admin.createTable(tableDescriptor);
+			// 5. Prepara los splits: de "0" a "9"
+			byte[][] splits = new byte[3][];
+			for (int i = 0; i < 3; i++) {
+				splits[i] = Bytes.toBytes(Integer.toString(i));
+			}
+
+			// 6. Crea la tabla con splits si no existe
+			admin.createTable(tableDescriptor, splits);
+
+//			admin.createTable(tableDescriptor);
 		}
 
 	}
@@ -80,35 +87,51 @@ public class MainProgram {
 		ArrayList<MeterReading> meterReadings = readCsv(csvFilepath, csvDelimiter);
 
 		try (Connection connection = HBaseConnector.getConnection()) {
-			
+
 			Table table = connection.getTable(TableName.valueOf(TABLE_NAME));
-			ArrayList<Put> puts = new ArrayList<Put>(); 
-			
+			ArrayList<Put> puts = new ArrayList<Put>();
+
 			for (MeterReading meterReading : meterReadings) {
 				for (int line = 1; line <= f; line++) {
-					Put put = new Put(Bytes.toBytes(String.format("%d%s_%s", line, meterReading.getSensor(), meterReading.getDay())));
-//					put.addColumn(Bytes.toBytes(CF_DATETIME),Bytes.toBytes(C_DATETIME_DAY)
-//							, Bytes.toBytes(meterReading.getDay()));
-					
-					for(int col = 1; col <= c; col++) {
-						put.addColumn(Bytes.toBytes(String.format("%s%d", CF_MEASUREX, col)), Bytes.toBytes(meterReading.getHHmm())
-								, Bytes.toBytes(meterReading.getMeasure()));
+
+					Put put = new Put(Bytes
+							.toBytes(String.format("%d%s_%s", line, meterReading.getSensor(), meterReading.getDay())));
+
+					for (int col = 1; col <= c; col++) {
+						put.addColumn(Bytes.toBytes(String.format("%s%d", CF_MEASUREX, col)),
+								Bytes.toBytes(meterReading.getHHmm()), Bytes.toBytes(meterReading.getMeasure()));
 					}
-					
-					puts.add(put);					
-					
-					if(puts.size() % 1000 == 0) {
+
+					puts.add(put);
+
+					if (puts.size() % 1000 == 0) {
 						table.put(puts);
+						puts.clear();
 					}
 				}
 			}
-			
-			if(puts.size() % 1000 != 0) {
+
+			if (puts.size() % 1000 != 0) {
 				table.put(puts);
+				puts.clear();
 			}
 
 		}
 
+	}
+	
+	public static /*ArrayList<MeterReading>*/ void readFromHbase(int readC, int readF) throws IOException {
+		try (Connection connection = HBaseConnector.getConnection()) {
+			Table table = connection.getTable(TableName.valueOf(TABLE_NAME));
+			
+			Scan scan = new Scan(Bytes.toBytes(String.format("%dDG", readF)));
+			scan.addColumn(Bytes.toBytes("personal"), Bytes.toBytes("givenName"));
+			scan.addFamily(Bytes.toBytes(String.format("%s%d",CF_MEASUREX, readC)));
+			ResultScanner scanner = table.getScanner(scan);
+//			for (Result result : scanner) {
+//			    result.
+//			}
+		}
 	}
 
 	public static ArrayList<MeterReading> readCsv(String csvFilePath, String csvDelimiter) {
@@ -121,10 +144,9 @@ public class MainProgram {
 				String[] values = line.split(csvDelimiter);
 				MeterReading mr = new MeterReading(values[0], values[1], values[2]);
 				meterReadings.add(mr);
-//				System.out.println(mr.toString());
 			}
 
-			System.out.println(meterReadings.size());
+			System.out.println(String.format("Se han leido %d filas del fichero", meterReadings.size()));
 		}
 		// Trap these Exceptions
 		catch (FileNotFoundException ex) {
