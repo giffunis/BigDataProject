@@ -1,10 +1,5 @@
 package parte1;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
-
 public class MeterReading {
 	
 	private String Sensor;
