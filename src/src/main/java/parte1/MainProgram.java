@@ -11,6 +11,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainProgram {
 
@@ -20,29 +21,40 @@ public class MainProgram {
 	private static final String CF_GENERAL_C_SENSOR = "sensor";
 	private static final String CF_GENERAL_C_DAY = "day";
 
-	private static byte[] B_CF_GENERAL = Bytes.toBytes(CF_GENERAL);
-	private static byte[] B_CF_GENERAL_C_SENSOR = Bytes.toBytes(CF_GENERAL_C_SENSOR);
-	private static byte[] B_CF_GENERAL_C_DAY = Bytes.toBytes(CF_GENERAL_C_DAY);
+	private static final byte[] B_CF_GENERAL = Bytes.toBytes(CF_GENERAL);
+	private static final byte[] B_CF_GENERAL_C_SENSOR = Bytes.toBytes(CF_GENERAL_C_SENSOR);
+	private static final byte[] B_CF_GENERAL_C_DAY = Bytes.toBytes(CF_GENERAL_C_DAY);
 
 	private static final String CSV_DELIMITER = ",";
-	private static final int N_LOCAL_REGION_SERVERS = 3;
+	private static int N_LOCAL_REGION_SERVERS = 3;
 
 	private static String csvFilepath = "/media/SHARED/repositories/BigDataProject/doc/source/SET-dec-2013.csv";
 
 	public static void main(String[] args) throws IOException {
-		int f = 3;
-		int c = 3;
+		int factorF = 1;
+		int factorC = 1;
 
 		// Borramos todas las tablas
 		dropTables();
 
 		// Creamos la estructura de la tabla
-		HTableDescriptor tableDescriptor = defineTable(c);
+		HTableDescriptor tableDescriptor = defineTable(factorC);
 		createTable(tableDescriptor);
 
-		bootstrapping(tableDescriptor,f);
+		// Leemos el fichero
+		List<OriginalData> originalData = readCsv(csvFilepath, CSV_DELIMITER);
+		System.out.println(String.format("Se han leido %d filas del fichero", originalData.size()));
+		// Aplicamos el bootstrapping
+		List<SynteticData> synteticData = MeterBootstrapping.generateSyntheticReadings(originalData, factorF, factorC);
+		System.out.println(String.format("Se han generado %d filas", synteticData.size()));
+		
+		// Insertamos en Hbase
+		insertDataIntoHbase(tableDescriptor, synteticData);
+		
+		System.out.println("Terminada la escritura"); // scan 'measure', { COLUMNS => ['measure3'], FILTER =>
+														// "PrefixFilter('3DG')"}
 
-		System.out.println("Terminada la escritura"); // scan 'measure', { COLUMNS => ['measure3'], FILTER => "PrefixFilter('3DG')"}
+//		List<Result> rows = getRowsBySensorPrefix("3DG","measure3");
 	}
 
 	private static void dropTables() throws IOException {
@@ -74,42 +86,40 @@ public class MainProgram {
 
 			byte[][] splits = new byte[N_LOCAL_REGION_SERVERS - 1][];
 			for (int i = 1; i < N_LOCAL_REGION_SERVERS; i++) {
-				splits[i-1] = Bytes.toBytes(Integer.toString(i));
+				splits[i - 1] = Bytes.toBytes(Integer.toString(i));
 			}
 
 			admin.createTable(tableDescriptor, splits);
 		}
 	}
 
-	private static void bootstrapping(HTableDescriptor tableDescriptor, int f) throws IOException {
-		ArrayList<MeterReading> meterReadings = readCsv(csvFilepath, CSV_DELIMITER);
+	private static void insertDataIntoHbase(HTableDescriptor tableDescriptor, List<SynteticData> synteticData)
+			throws IOException {
 		HColumnDescriptor[] columnFamilies = tableDescriptor.getColumnFamilies();
 
 		try (Connection connection = HBaseConnector.getConnection()) {
 			Table table = connection.getTable(tableDescriptor.getTableName());
 
-			for (MeterReading meterReading : meterReadings) {
-				for (int line = 1; line <= f; line++) {
+			for (SynteticData data : synteticData) {
 
-					Put put = new Put(Bytes.toBytes(GetRowKey(line, meterReading)));
-
-					for (HColumnDescriptor column : columnFamilies) {
-						switch (column.getNameAsString()) {
-						case CF_GENERAL:
-							put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR, Bytes.toBytes(String.format("%d%s", line, meterReading.getSensorAsString())));
-							put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_DAY, meterReading.getDay());
-							break;
-						default:
-							put.addColumn(column.getName(), meterReading.getHHmm(),meterReading.getMeasure());
-							break;
-						}
+				Put put = new Put(Bytes.toBytes(GetRowKey(data)));
+				int col = 0;
+				for (HColumnDescriptor column : columnFamilies) {
+					switch (column.getNameAsString()) {
+					case CF_GENERAL:
+						put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR, data.getSensor());
+						put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_DAY, data.getDay());
+						break;
+					default:
+						put.addColumn(column.getName(), data.getHHmm(), data.getMeasure(col));
+						col++;
+						break;
 					}
-
-					table.put(put);
-//					System.out.println(String.format("Enviando el siguiente put: %s \n al servidor", put.toString()));
 				}
-			}
 
+				table.put(put);
+//					System.out.println(String.format("Enviando el siguiente put: %s \n al servidor", put.toString()));
+			}
 		}
 	}
 
@@ -119,38 +129,85 @@ public class MainProgram {
 		return positiveHash % (buckets);
 	}
 
-	private static String GetRowKey(int line, MeterReading mr) {
-		int bucket = computeBucket(line + mr.getSensorAsString() + mr.getDatetimeAsString(), N_LOCAL_REGION_SERVERS);
-		String rowKey = bucket + "#" + line + mr.getSensorAsString() + "#" + mr.getDayAsString();
+	private static String GetRowKey(SynteticData mr) {
+		int bucket = computeBucket(mr.getSensorAsString() + mr.getDatetimeAsString(), N_LOCAL_REGION_SERVERS);
+		String rowKey = bucket + "#" + mr.getSensorAsString() + "#" + mr.getDayAsString();
 		return rowKey;
 	}
 
-//	private static ArrayList<MeterReading> readFromHbase(int readC, int readF) throws IOException {
-//		try (Connection connection = HBaseConnector.getConnection()) {
-//			Table table = connection.getTable(TableName.valueOf(TABLE_NAME));
+//	public static List<Result> getRowsBySensorPrefix(String prefix, String cfMeasure) throws IOException {
+//		// 1. Comparator basado en regex: empieza por el prefijo
+//        RegexStringComparator regex = new RegexStringComparator("^" + prefix + ".*");
 //
-//			Scan scan = new Scan(Bytes.toBytes(String.format("%dDG", readF)));
-//			scan.addColumn(Bytes.toBytes("personal"), Bytes.toBytes("givenName"));
-//			scan.addFamily(Bytes.toBytes(String.format("%s%d", CF_MEASUREX, readC)));
-//			ResultScanner scanner = table.getScanner(scan);
-//			for (Result result : scanner) {
-//			    result.
-//			}
-//		}
-//	}
+//        // 2. Filtro de columna única usando CompareOp.EQUAL y el comparator anterior
+//        SingleColumnValueFilter filter = new SingleColumnValueFilter(
+//            B_CF_GENERAL,
+//            B_CF_GENERAL_C_SENSOR,
+//            CompareOp.EQUAL,
+//            regex
+//        );
+//        filter.setFilterIfMissing(true);
+//
+//        // 3. Configuración del Scan
+//        Scan scan = new Scan();
+//        scan.addFamily(B_CF_GENERAL);
+//        scan.addFamily(Bytes.toBytes(cfMeasure));
+//        scan.setFilter(filter);
+//
+//        // 4. Ejecución y recolección de resultados
+//        List<Result> rows = new ArrayList<>();
+//        try (Connection conn = HBaseConnector.getConnection();
+//             Table table = conn.getTable(TableName.valueOf(TABLE_NAME));
+//             ResultScanner scanner = table.getScanner(scan)) {
+//
+//            for (Result r : scanner) {
+//                rows.add(r);
+//            }
+//        }
+//
+//        return rows;
+//    }
 
-	private static ArrayList<MeterReading> readCsv(String csvFilePath, String csvDelimiter) {
-		ArrayList<MeterReading> meterReadings = new ArrayList<MeterReading>();
+//	public MeterReading mapResultToPrint(Result result, String cfMeasure) {
+//	    String rowKey    = Bytes.toString(result.getRow());
+//	    String sensorId  = Bytes.toString(
+//	        result.getValue(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR)
+//	    );
+//	    String day       = Bytes.toString(
+//	        result.getValue(B_CF_GENERAL, B_CF_GENERAL_C_DAY)
+//	    );
+//	    
+//	    result.getFamilyMap(B_CF_GENERAL);
+//	    result.getFamilyMap(Bytes.toBytes(cfMeasure));
+//
+//	    // Supongamos que guardas las medidas en un Map<String,Double>
+//	    Map<String, Double> measures = new HashMap<>();
+//	    for (byte[] family : result.getMap().keySet()) {
+//	        String cf = Bytes.toString(family);
+//	        
+//	        if (cf.startsWith("measure")) {
+//	            for (Cell cell : result.getColumnCells(family, Bytes.toBytes("00:00"))) {
+//	                String qualifier = Bytes.toString(CellUtil.cloneQualifier(cell));
+//	                double value      = Bytes.toDouble(CellUtil.cloneValue(cell));
+//	                measures.put(cf + ":" + qualifier, value);
+//	            }
+//	        }
+//	    }
+//
+//	    return new MeterReading(rowKey, sensorId, day, measures);
+//	}
+//	
+	private static List<OriginalData> readCsv(String csvFilePath, String csvDelimiter) {
+		List<OriginalData> meterReadings = new ArrayList<OriginalData>();
 
 		try (BufferedReader br = new BufferedReader(new FileReader(csvFilePath))) {
 			String line;
 			while ((line = br.readLine()) != null) {
 				String[] values = line.split(csvDelimiter);
-				MeterReading mr = new MeterReading(values[0], values[1], values[2]);
+				OriginalData mr = new OriginalData(values[0], values[1], values[2]);
 				meterReadings.add(mr);
 			}
 
-			System.out.println(String.format("Se han leido %d filas del fichero", meterReadings.size()));
 		} catch (FileNotFoundException ex) {
 			System.err.println(ex.getMessage());
 		} catch (IOException ex) {
