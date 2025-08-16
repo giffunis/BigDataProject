@@ -31,8 +31,8 @@ public class MainProgram {
 	private static String csvFilepath = "/media/SHARED/repositories/BigDataProject/doc/source/SET-dec-2013.csv";
 
 	public static void main(String[] args) throws IOException {
-		int factorF = 1;
-		int factorC = 1;
+		int factorF = 5;
+		int factorC = 5;
 
 		// Borramos todas las tablas
 		dropTables();
@@ -41,13 +41,9 @@ public class MainProgram {
 		HTableDescriptor tableDescriptor = defineTable(factorC);
 		createTable(tableDescriptor);
 
-		// Leemos el fichero
-		List<OriginalData> originalData = readCsv(csvFilepath, CSV_DELIMITER);
-		System.out.println(String.format("Se han leido %d filas del fichero", originalData.size()));
-		// Aplicamos el bootstrapping
-		List<SynteticData> synteticData = MeterBootstrapping.generateSyntheticReadings(originalData, factorF, factorC);
-		System.out.println(String.format("Se han generado %d filas", synteticData.size()));
-		
+		// Leemos el fichero y aplicamos el bootstrapping
+		List<SynteticData> synteticData = generateSyntheticReadings(readCsv(csvFilepath, CSV_DELIMITER), factorF);
+				
 		// Insertamos en Hbase
 		insertDataIntoHbase(tableDescriptor, synteticData);
 		
@@ -103,7 +99,7 @@ public class MainProgram {
 			for (SynteticData data : synteticData) {
 
 				Put put = new Put(Bytes.toBytes(GetRowKey(data)));
-				int col = 0;
+		
 				for (HColumnDescriptor column : columnFamilies) {
 					switch (column.getNameAsString()) {
 					case CF_GENERAL:
@@ -111,8 +107,7 @@ public class MainProgram {
 						put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_DAY, data.getDay());
 						break;
 					default:
-						put.addColumn(column.getName(), data.getHHmm(), data.getMeasure(col));
-						col++;
+						put.addColumn(column.getName(), data.getHHmm(), data.getMeasure());
 						break;
 					}
 				}
@@ -197,6 +192,20 @@ public class MainProgram {
 //	    return new MeterReading(rowKey, sensorId, day, measures);
 //	}
 //	
+	private static List<SynteticData> generateSyntheticReadings(List<OriginalData> originalData, int factorF) {
+        List<SynteticData> synteticData = new ArrayList<SynteticData>();
+    	
+        for (OriginalData original : originalData) {	
+        		
+        		for (int f = 1; f <= factorF; f++) {	
+        			synteticData.add(new SynteticData(String.format("%d%s", f, original.getSensor()), original.getDatetime(), original.getMeasure()));
+        		}	
+		}
+        
+        System.out.println(String.format("Se han generado %d filas", synteticData.size()));
+        return synteticData;
+    }
+	
 	private static List<OriginalData> readCsv(String csvFilePath, String csvDelimiter) {
 		List<OriginalData> meterReadings = new ArrayList<OriginalData>();
 
@@ -213,6 +222,8 @@ public class MainProgram {
 		} catch (IOException ex) {
 			System.err.println(ex.getMessage());
 		}
+		
+		System.out.println(String.format("Se han leido %d filas del fichero", meterReadings.size()));
 
 		return meterReadings;
 	}

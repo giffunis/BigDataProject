@@ -1,8 +1,5 @@
 package parte1;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class SynteticData {
@@ -13,15 +10,15 @@ public class SynteticData {
 	private byte[] bDay_;
 	private String HHmm_;
 	private byte[] bHHmm_;
-	private List<String> measures_;
-	private List<byte[]> bMeasures_;
+	private String measure_;
+	private byte[] bMeasure_;
 
 
 		
-	public SynteticData(String sensor, String datetime, List<String> measures) {
+	public SynteticData(String sensor, String datetime, String measure) {
 		setSensor(sensor);
 		setDatetime(datetime);
-		setMeasures(measures);
+		setMeasure(measure);
 	}
 
 	public void setSensor(String sensor) {
@@ -37,13 +34,9 @@ public class SynteticData {
 		bHHmm_ = Bytes.toBytes(HHmm_);
 	}
 
-	public void setMeasures(List<String> measures) {
-		measures_ = new ArrayList<String>(measures);
-		bMeasures_ = new ArrayList<byte[]>();
-		
-		for (String m : measures) {
-			bMeasures_.add(Bytes.toBytes(m));
-		}
+	public void setMeasure(String measure) {
+		measure_ = measure;
+		bMeasure_ = Bytes.toBytes(measure_);
 	}
 
 	public byte[] getSensor() {
@@ -70,20 +63,16 @@ public class SynteticData {
 		return bHHmm_;
 	}
 
-	public List<byte[]> getMeasures() {
-		return bMeasures_;
+	public byte[] getMeasure() {
+		return bMeasure_;
 	}
-	
-	public byte[] getMeasure(int n) {
-		return bMeasures_.get(n);
-	}
-	
-	public List<String> getMeasuresAsStringList() {
-		return measures_;
+		
+	public String getMeasureAsString() {
+		return measure_;
 	}
 
 	@Override
 	public String toString() {
-		return "Lectura [Sensor=" + sensor_ + ", Datetime=" + datetime_ + ", Measures=" + measures_.toString() + "]";
+		return "Lectura [Sensor=" + sensor_ + ", Datetime=" + datetime_ + ", Measures=" + measure_ + "]";
 	}
 }
