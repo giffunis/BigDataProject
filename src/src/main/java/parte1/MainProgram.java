@@ -16,22 +16,31 @@ public class MainProgram {
 
 	private static final String TABLE_NAME = "measure";
 	private static final String CF_MEASUREX = "measure";
+	private static final String CF_GENERAL = "general";
+	private static final String CF_GENERAL_C_SENSOR = "sensor";
+	private static final String CF_GENERAL_C_DAY = "day";
+
+	private static byte[] B_CF_GENERAL = Bytes.toBytes(CF_GENERAL);
+	private static byte[] B_CF_GENERAL_C_SENSOR = Bytes.toBytes(CF_GENERAL_C_SENSOR);
+	private static byte[] B_CF_GENERAL_C_DAY = Bytes.toBytes(CF_GENERAL_C_DAY);
+
 	private static final String CSV_DELIMITER = ",";
-	private static final int SPLITS = 5;
-	private static final int BLOCKS = 5000;
+	private static final int N_LOCAL_REGION_SERVERS = 3;
 
 	private static String csvFilepath = "/media/SHARED/repositories/BigDataProject/doc/source/SET-dec-2013.csv";
 
 	public static void main(String[] args) throws IOException {
-		int f = 5;
-		int c = 5;
+		int f = 1;
+		int c = 1;
 
 		// Borramos todas las tablas
 		dropTables();
 
-		// Creamos la estructura de las tablas
-		createTable(c);
-		bootstrapping(f, c);
+		// Creamos la estructura de la tabla
+		HTableDescriptor tableDescriptor = defineTable(c);
+		createTable(tableDescriptor);
+
+		bootstrapping(tableDescriptor,f, c);
 
 		System.out.println("Terminada la escritura"); // scan 'measure', { COLUMNS => ['measure3'], FILTER =>
 														// "PrefixFilter('3DG')"}
@@ -48,17 +57,24 @@ public class MainProgram {
 		}
 	}
 
-	private static void createTable(int measures) throws IOException {
+	private static HTableDescriptor defineTable(int nMeasuresBySensor) {
+		HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+
+		tableDescriptor.addFamily(new HColumnDescriptor(CF_GENERAL));
+
+		for (int m = 1; m <= nMeasuresBySensor; m++) {
+			tableDescriptor.addFamily(new HColumnDescriptor(String.format("%s%d", CF_MEASUREX, m)));
+		}
+
+		return tableDescriptor;
+	}
+
+	private static void createTable(HTableDescriptor tableDescriptor) throws IOException {
 		try (Connection connection = HBaseConnector.getConnection()) {
 			Admin admin = connection.getAdmin();
-			HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
 
-			for (int m = 1; m <= measures; m++) {
-				tableDescriptor.addFamily(new HColumnDescriptor(String.format("%s%d", CF_MEASUREX, m)));
-			}
-
-			byte[][] splits = new byte[SPLITS][];
-			for (int i = 0; i < SPLITS; i++) {
+			byte[][] splits = new byte[N_LOCAL_REGION_SERVERS][];
+			for (int i = 0; i < N_LOCAL_REGION_SERVERS; i++) {
 				splits[i] = Bytes.toBytes(Integer.toString(i + 1));
 			}
 
@@ -66,57 +82,49 @@ public class MainProgram {
 		}
 	}
 
-	private static void bootstrapping(int f, int c) throws IOException {
+	private static void bootstrapping(HTableDescriptor tableDescriptor, int f, int c) throws IOException {
 		ArrayList<MeterReading> meterReadings = readCsv(csvFilepath, CSV_DELIMITER);
+		HColumnDescriptor[] columnFamilies = tableDescriptor.getColumnFamilies();
 
 		try (Connection connection = HBaseConnector.getConnection()) {
-			BufferedMutator mutator = connection.getBufferedMutator(TableName.valueOf(TABLE_NAME));
-			ArrayList<Put> puts = new ArrayList<Put>();
-			int nPuts = 0;
+			Table table = connection.getTable(tableDescriptor.getTableName());
 
 			for (MeterReading meterReading : meterReadings) {
 				for (int line = 1; line <= f; line++) {
+
 					Put put = new Put(Bytes.toBytes(GetRowKey(line, meterReading)));
 
-					for (int col = 1; col <= c; col++) {
-						put.addColumn(Bytes.toBytes(String.format("%s%d", CF_MEASUREX, col)),
-								Bytes.toBytes(meterReading.getHHmm()), Bytes.toBytes(meterReading.getMeasure()));
+					for (HColumnDescriptor column : columnFamilies) {
+						switch (column.getNameAsString()) {
+						case CF_GENERAL:
+							put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR, Bytes.toBytes(meterReading.getSensor()));
+							put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_DAY, Bytes.toBytes(meterReading.getDay()));
+							break;
+						default:
+							put.addColumn(column.getName(), Bytes.toBytes(meterReading.getHHmm()),
+									Bytes.toBytes(meterReading.getMeasure()));
+							break;
+						}
 					}
 
-					puts.add(put); nPuts++;
-
-					if (puts.size() % BLOCKS == 0) {
-						SendAndClearBlockToHbaseTable(mutator, puts);
-					}
+					table.put(put);
+					System.out.println(String.format("Enviando el siguiente put: %s \n al servidor", put.toString()));
 				}
 			}
 
-			if (puts.size() != 0) {
-				SendAndClearBlockToHbaseTable(mutator, puts);
-			}
-			
-			System.out.println(String.format("Enviandos %d 'puts' al servidor", nPuts));
 		}
-	}
-
-	private static void SendAndClearBlockToHbaseTable(BufferedMutator mutator, ArrayList<Put> puts) throws IOException {
-		System.out.println(String.format("Enviando %d 'puts' al servidor", puts.size()));
-		mutator.mutate(puts);
-		mutator.flush();
-		puts.clear();
-		System.out.println("Enviados");
 	}
 
 	private static int computeBucket(String key, int buckets) {
 		int rawHash = key.hashCode();
 		int positiveHash = rawHash & Integer.MAX_VALUE;
-		return positiveHash % buckets;
+		return positiveHash % (buckets);
 	}
 
 	private static String GetRowKey(int line, MeterReading mr) {
-		int bucket = computeBucket(line + mr.getSensor() + mr.getDatetime(), SPLITS);
+		int bucket = computeBucket(line + mr.getSensor() + mr.getDatetime(), N_LOCAL_REGION_SERVERS);
 		String rowKey = bucket + "#" + line + mr.getSensor() + "#" + mr.getDay();
-		return line + mr.getSensor() + "#" + mr.getDay();//rowKey;
+		return rowKey;
 	}
 
 //	private static ArrayList<MeterReading> readFromHbase(int readC, int readF) throws IOException {
