@@ -1,61 +1,77 @@
 package parte1;
 
+import org.apache.hadoop.hbase.util.Bytes;
+
 public class MeterReading {
-	
-	private String Sensor;
-	private String Datetime;
-	private String Measure;
-	
+
+	private String sensor_;
+	private String datetime_;
+	private String day_;
+	private String HHmm_;
+	private String measure_;
+	private byte[] bDay_;
+	private byte[] bHHmm_;
+	private byte[] bMeasure_;
+
 	private static final String EMPTY = "";
-	
+
 	public MeterReading() {
-		Sensor = EMPTY;
-		Datetime = EMPTY;
-		Measure = EMPTY;
+		sensor_ = EMPTY;
+		datetime_ = EMPTY;
+		measure_ = EMPTY;
 	}
 
 	public MeterReading(String sensor, String datetime, String measure) {
 		super();
-		Sensor = sensor;
-		Datetime = datetime;
-		Measure = measure;
-	}
-
-	public String getSensor() {
-		return Sensor;
+		setSensor(sensor);
+		setDatetime(datetime);
+		setMeasure(measure);
 	}
 
 	public void setSensor(String sensor) {
-		Sensor = sensor;
+		sensor_ = sensor;
 	}
 
-	public String getDay() {
-		return Datetime.split(" ")[0];
-	}
-	
-	public String getHHmm() {
-		return Datetime.split(" ")[1];
-	}
-	
 	public void setDatetime(String datetime) {
-		Datetime = datetime;
-	}
-	
-	public String getDatetime() {
-		return Datetime;
-	}
-
-	public String getMeasure() {
-		return Measure;
+		datetime_ = datetime;
+		day_ = datetime_.split(" ")[0];
+		bDay_ = Bytes.toBytes(day_);
+		HHmm_ = datetime_.split(" ")[1];
+		bHHmm_ = Bytes.toBytes(HHmm_);
 	}
 
 	public void setMeasure(String measure) {
-		Measure = measure;
+		measure_ = measure;
+		bMeasure_ = Bytes.toBytes(measure_);
+	}
+
+	public String getSensorAsString() {
+		return sensor_;
+	}
+
+	public byte[] getDay() {
+		return bDay_;
 	}
 	
+	public String getDayAsString() {
+		return day_;
+	}
+
+	public byte[] getHHmm() {
+		return bHHmm_;
+	}
+
+	public String getDatetimeAsString() {
+		return datetime_;
+	}
+
+	public byte[] getMeasure() {
+		return bMeasure_;
+	}
+
 	@Override
 	public String toString() {
-		return "Lectura [Sensor=" + Sensor + ", Datetime=" + Datetime + ", Measure=" + Measure + "]";
+		return "Lectura [Sensor=" + sensor_ + ", Datetime=" + datetime_ + ", Measure=" + measure_ + "]";
 	}
-	
+
 }

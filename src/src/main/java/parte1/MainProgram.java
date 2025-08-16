@@ -30,8 +30,8 @@ public class MainProgram {
 	private static String csvFilepath = "/media/SHARED/repositories/BigDataProject/doc/source/SET-dec-2013.csv";
 
 	public static void main(String[] args) throws IOException {
-		int f = 5;
-		int c = 5;
+		int f = 3;
+		int c = 3;
 
 		// Borramos todas las tablas
 		dropTables();
@@ -40,10 +40,9 @@ public class MainProgram {
 		HTableDescriptor tableDescriptor = defineTable(c);
 		createTable(tableDescriptor);
 
-		bootstrapping(tableDescriptor,f, c);
+		bootstrapping(tableDescriptor,f);
 
-		System.out.println("Terminada la escritura"); // scan 'measure', { COLUMNS => ['measure3'], FILTER =>
-														// "PrefixFilter('3DG')"}
+		System.out.println("Terminada la escritura"); // scan 'measure', { COLUMNS => ['measure3'], FILTER => "PrefixFilter('3DG')"}
 	}
 
 	private static void dropTables() throws IOException {
@@ -82,7 +81,7 @@ public class MainProgram {
 		}
 	}
 
-	private static void bootstrapping(HTableDescriptor tableDescriptor, int f, int c) throws IOException {
+	private static void bootstrapping(HTableDescriptor tableDescriptor, int f) throws IOException {
 		ArrayList<MeterReading> meterReadings = readCsv(csvFilepath, CSV_DELIMITER);
 		HColumnDescriptor[] columnFamilies = tableDescriptor.getColumnFamilies();
 
@@ -97,12 +96,11 @@ public class MainProgram {
 					for (HColumnDescriptor column : columnFamilies) {
 						switch (column.getNameAsString()) {
 						case CF_GENERAL:
-							put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR, Bytes.toBytes(meterReading.getSensor()));
-							put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_DAY, Bytes.toBytes(meterReading.getDay()));
+							put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR, Bytes.toBytes(String.format("%d%s", line, meterReading.getSensorAsString())));
+							put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_DAY, meterReading.getDay());
 							break;
 						default:
-							put.addColumn(column.getName(), Bytes.toBytes(meterReading.getHHmm()),
-									Bytes.toBytes(meterReading.getMeasure()));
+							put.addColumn(column.getName(), meterReading.getHHmm(),meterReading.getMeasure());
 							break;
 						}
 					}
@@ -122,8 +120,8 @@ public class MainProgram {
 	}
 
 	private static String GetRowKey(int line, MeterReading mr) {
-		int bucket = computeBucket(line + mr.getSensor() + mr.getDatetime(), N_LOCAL_REGION_SERVERS);
-		String rowKey = bucket + "#" + line + mr.getSensor() + "#" + mr.getDay();
+		int bucket = computeBucket(line + mr.getSensorAsString() + mr.getDatetimeAsString(), N_LOCAL_REGION_SERVERS);
+		String rowKey = bucket + "#" + line + mr.getSensorAsString() + "#" + mr.getDayAsString();
 		return rowKey;
 	}
 
