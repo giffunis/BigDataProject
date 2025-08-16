@@ -30,8 +30,8 @@ public class MainProgram {
 	private static String csvFilepath = "/media/SHARED/repositories/BigDataProject/doc/source/SET-dec-2013.csv";
 
 	public static void main(String[] args) throws IOException {
-		int f = 1;
-		int c = 1;
+		int f = 5;
+		int c = 5;
 
 		// Borramos todas las tablas
 		dropTables();
@@ -73,9 +73,9 @@ public class MainProgram {
 		try (Connection connection = HBaseConnector.getConnection()) {
 			Admin admin = connection.getAdmin();
 
-			byte[][] splits = new byte[N_LOCAL_REGION_SERVERS][];
-			for (int i = 0; i < N_LOCAL_REGION_SERVERS; i++) {
-				splits[i] = Bytes.toBytes(Integer.toString(i + 1));
+			byte[][] splits = new byte[N_LOCAL_REGION_SERVERS - 1][];
+			for (int i = 1; i < N_LOCAL_REGION_SERVERS; i++) {
+				splits[i-1] = Bytes.toBytes(Integer.toString(i));
 			}
 
 			admin.createTable(tableDescriptor, splits);
@@ -108,7 +108,7 @@ public class MainProgram {
 					}
 
 					table.put(put);
-					System.out.println(String.format("Enviando el siguiente put: %s \n al servidor", put.toString()));
+//					System.out.println(String.format("Enviando el siguiente put: %s \n al servidor", put.toString()));
 				}
 			}
 
