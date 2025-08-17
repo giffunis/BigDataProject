@@ -15,8 +15,10 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.Time;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -27,11 +29,11 @@ public class MainProgram {
 	private static final String CF_MEASUREX = "measure";
 	private static final String CF_GENERAL = "general";
 	private static final String CF_GENERAL_C_SENSOR = "sensor";
-	private static final String CF_GENERAL_C_DAY = "day";
+	private static final String CF_GENERAL_C_DATE = "day";
 
 	private static final byte[] B_CF_GENERAL = Bytes.toBytes(CF_GENERAL);
 	private static final byte[] B_CF_GENERAL_C_SENSOR = Bytes.toBytes(CF_GENERAL_C_SENSOR);
-	private static final byte[] B_CF_GENERAL_C_DAY = Bytes.toBytes(CF_GENERAL_C_DAY);
+	private static final byte[] B_CF_GENERAL_C_DATE = Bytes.toBytes(CF_GENERAL_C_DATE);
 
 	private static final String CSV_DELIMITER = ",";
 	private static int N_LOCAL_REGION_SERVERS = 3;
@@ -45,29 +47,25 @@ public class MainProgram {
 		int factorC = 5;
 		int extF = 3;
 		int extC = 3;
-		/*
-		 * // Borramos todas las tablas dropTables();
-		 * 
-		 * // Creamos la estructura de la tabla HTableDescriptor tableDescriptor =
-		 * defineTable(factorC); createTable(tableDescriptor);
-		 * 
-		 * // Leemos el fichero y aplicamos el bootstrapping List<SynteticData>
-		 * synteticData = generateSyntheticReadings(readCsv(csvFilepath, CSV_DELIMITER),
-		 * factorF);
-		 * 
-		 * // Insertamos en Hbase insertDataIntoHbase(tableDescriptor, synteticData);
-		 * 
-		 * System.out.println("Terminada la escritura"); // scan 'measure', { COLUMNS =>
-		 * ['measure3'], FILTER => // "PrefixFilter('3DG')"}
-		 */
+		
+		// Borramos todas las tablas
+		dropTables();
+		
+		// Creamos la estructura de la tabla
+		HTableDescriptor tableDescriptor = defineTable(factorC);
+		createTable(tableDescriptor);
+		
+		// Leemos el fichero y aplicamos el bootstrapping
+		List<SynteticData> synteticData = generateSyntheticReadings(readCsv(inputCsvFilepath, CSV_DELIMITER),factorF);
+		
+		// Insertamos en Hbase 
+		insertDataIntoHbase(tableDescriptor, synteticData);
+		System.out.println("Terminada la escritura");
 
 		String cF = String.format("%s%d", CF_MEASUREX, extC);
 		String fId = String.format("%dDG", extF);
-		List<Result> rows = getRowsBySensorPrefix(fId, cF);
-
-		String header = "Sensor, Date";
 		
-		escribirCsvSimple("", cF, fId, rows, outputCsvFilepath);
+		writeCsv(outputCsvFilepath, generateHeader(), getRowsBySensorPrefix(fId, cF));
 
 	}
 
@@ -76,7 +74,8 @@ public class MainProgram {
 			Admin admin = connection.getAdmin();
 
 			for (TableName table : admin.listTableNames()) {
-				admin.disableTable(table);
+				if(!admin.isTableDisabled(table))
+					admin.disableTable(table);
 				admin.deleteTable(table);
 			}
 		}
@@ -119,10 +118,11 @@ public class MainProgram {
 				Put put = new Put(Bytes.toBytes(GetRowKey(data)));
 
 				for (HColumnDescriptor column : columnFamilies) {
-					switch (column.getNameAsString()) {
+					String name = column.getNameAsString();
+					switch (name) {
 					case CF_GENERAL:
 						put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR, data.getSensor());
-						put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_DAY, data.getDay());
+						put.addColumn(B_CF_GENERAL, B_CF_GENERAL_C_DATE, data.getDay());
 						break;
 					default:
 						put.addColumn(column.getName(), data.getHHmm(), data.getMeasure());
@@ -131,7 +131,6 @@ public class MainProgram {
 				}
 
 				table.put(put);
-//					System.out.println(String.format("Enviando el siguiente put: %s \n al servidor", put.toString()));
 			}
 		}
 	}
@@ -143,27 +142,27 @@ public class MainProgram {
 	}
 
 	private static String GetRowKey(SynteticData mr) {
-		int bucket = computeBucket(mr.getSensorAsString() + mr.getDatetimeAsString(), N_LOCAL_REGION_SERVERS);
+		int bucket = computeBucket(mr.getSensorAsString() + mr.getDayAsString(), N_LOCAL_REGION_SERVERS);
 		String rowKey = bucket + "#" + mr.getSensorAsString() + "#" + mr.getDayAsString();
 		return rowKey;
 	}
 
 	public static List<Result> getRowsBySensorPrefix(String prefix, String cfMeasure) throws IOException {
-		// 1. Comparator basado en regex: empieza por el prefijo
+
 		RegexStringComparator regex = new RegexStringComparator("^" + prefix + ".*");
 
-		// 2. Filtro de columna única usando CompareOp.EQUAL y el comparator anterior
+		// Filtro
 		SingleColumnValueFilter filter = new SingleColumnValueFilter(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR,
 				CompareOp.EQUAL, regex);
 		filter.setFilterIfMissing(true);
 
-		// 3. Configuración del Scan
+		// Configuración del Scan
 		Scan scan = new Scan();
 		scan.addFamily(B_CF_GENERAL);
 		scan.addFamily(Bytes.toBytes(cfMeasure));
 		scan.setFilter(filter);
 
-		// 4. Ejecución y recolección de resultados
+		// Ejecución
 		List<Result> rows = new ArrayList<>();
 		try (Connection conn = HBaseConnector.getConnection();
 				Table table = conn.getTable(TableName.valueOf(TABLE_NAME));
@@ -173,36 +172,61 @@ public class MainProgram {
 				rows.add(r);
 			}
 		}
+		
+		// Ordenar por sensor (alfabéticamente) y luego por day (numéricamente)
+		rows.sort(Comparator
+		    .comparing((Result r) -> {
+		        byte[] sensorBytes = r.getValue(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR);
+		        return Bytes.toString(sensorBytes);
+		    })
+		    .thenComparing((Result r) -> {
+		        byte[] dayBytes = r.getValue(B_CF_GENERAL, B_CF_GENERAL_C_DATE);
+		        return Bytes.toString(dayBytes);
+		    })
+		);
 
 		System.out.println(String.format("Se han recuperado %d filas", rows.size()));
 		return rows;
 	}
 
-	public static void escribirCsvSimple(String header, String cfMeasure, String prefijo, List<Result> results, String filePath)
+	public static void writeCsv(String filePath, List<String> header, List<Result> results)
 			throws IOException {
 		try (FileWriter fw = new FileWriter(filePath)) {
-			// Escribir cabecera
-//	        fw.write(header);
 
-			for (Result r : results) {
-				fw.write(mapResultToLine(r, cfMeasure, prefijo));
+	        fw.write(String.join(CSV_DELIMITER, header));
+
+			for (Result result : results) {
+				fw.write("\n");
+				fw.write(String.join(CSV_DELIMITER, mapResult(result)));
 			}
 		}
+		System.out.println(String.format("Se han escrito %d filas, más la cabecera.", results.size()));
 	}
 
-	public static String mapResultToLine(Result result, String cfMeasure, String prefijo) {
-		String sensorId = Bytes.toString(result.getValue(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR)).replace(prefijo, "DG");
-		String day = Bytes.toString(result.getValue(B_CF_GENERAL, B_CF_GENERAL_C_DAY));
+	public static List<String> mapResult(Result result) {
+		List<String> line = new ArrayList<String>();
+		line.add(Bytes.toString(result.getValue(B_CF_GENERAL, B_CF_GENERAL_C_SENSOR)).substring(1)); // Eliminamos el primer char
+		line.add(Bytes.toString(result.getValue(B_CF_GENERAL, B_CF_GENERAL_C_DATE)));
 
-		String line = "\n" + sensorId + CSV_DELIMITER + day;
+	
+		for (Cell cell : result.listCells()) {
+	        String cf = Bytes.toString(
+	            cell.getFamilyArray(),
+	            cell.getFamilyOffset(),
+	            cell.getFamilyLength()
+	        );
+	        
+	        if(cf.contains(CF_MEASUREX)) {
+	        	// Obtener el mapa de columnas dentro de la familia 'measureX'
+	    		NavigableMap<byte[], byte[]> columnas = result.getFamilyMap(Bytes.toBytes(cf));
 
-		// Obtener el mapa de columnas dentro de la familia 'measure1'
-		NavigableMap<byte[], byte[]> columnas = result.getFamilyMap(Bytes.toBytes(cfMeasure));
-
-		for (Entry<byte[], byte[]> entry : columnas.entrySet()) {
-			String measure = Bytes.toString(entry.getValue());
-			line += CSV_DELIMITER + measure;
-		}
+	    		for (Entry<byte[], byte[]> entry : columnas.entrySet()) {
+	    			line.add(Bytes.toString(entry.getValue()));
+	    		}
+	    		// Salimos del bucle porque no nos interesan las demás columnas
+	    		break;
+	        }
+	    }
 
 		return line;
 	}
@@ -243,5 +267,23 @@ public class MainProgram {
 
 		return meterReadings;
 	}
+	
+	private static List<String> generateHeader() {
+		List<String> header = new ArrayList<String>();
+		header.add("Sensor"); header.add("Date"); header.addAll(generateTimeIntervals());
+		return header;
+	}
+	
+	private static List<String> generateTimeIntervals () {
+    	List<String> timeIntervals = new ArrayList<String>();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm");
+        for (int hour = 0; hour < 24; hour++) {
+            for (int minute = 0; minute < 60; minute += 10) {
+                LocalTime time = LocalTime.of(hour, minute);
+                timeIntervals.add(time.format(fmt));
+            }
+        }
+        return timeIntervals;
+    }
 
 }
