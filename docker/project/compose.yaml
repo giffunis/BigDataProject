@@ -1,6 +1,6 @@
 services:
   hbase-pseudo:
-    image: cbarrancoupo/hbase-pseudo
+    image: hbase-pseudo-jsgifbec
     container_name: hbase-pseudo
     hostname: hbase-pseudo
     volumes:
