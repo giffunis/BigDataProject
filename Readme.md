@@ -40,7 +40,7 @@ Los comandos son explicados en el [punto 3](#3-invocación-de-las-herramientas-d
     
 ## Enlace del vídeo
 
- [Vídeo BigData parte 1](URL)
+ [Vídeo BigData parte 1](https://youtu.be/yg8LbI_Mag0)
 
 ## Requisitos del trabajo final - parte1
 
