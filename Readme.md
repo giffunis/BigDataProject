@@ -93,17 +93,21 @@ Para 3 servidores de región:
     
 La estructura de las familias de columna escogida es la siguiente:
     
-|             general                       |           measure1       |       measure2          |     |          measureC       |
-|-------------------------------------------|--------------------------|-------------------------|-----|-------------------------|
-| sensorId = 1DGXXXXX, day = 2013-12-01     | 00:00 => valor_m1_00:00  | 00:00 => valor_m2_00:00 | ... | 00:00 => valor_mC_00:00 |
-|                                           | 00:10 => valor_m1_00:10  | 00:00 => valor_m2_00:10 | ... | 00:00 => valor_mC_00:10 |
-|                                           | 00:20 => valor_m1_00:20  | 00:00 => valor_m2_00:20 | ... | 00:00 => valor_mC_00:20 |
+|             general                       |           measure1         |       measure2            |     |          measureC         |
+|-------------------------------------------|----------------------------|---------------------------|-----|---------------------------|
+| sensorId = 1DGXXXX1, day = 2013-12-01     | 00:00 => valor_s1m1_00:00  | 00:00 => valor_s1m2_00:00 | ... | 00:00 => valor_s1mC_00:00 |
+|                                           | 00:10 => valor_s1m1_00:10  | 00:10 => valor_s1m2_00:10 | ... | 00:10 => valor_s1mC_00:10 |
+|                                           | 00:20 => valor_s1m1_00:20  | 00:20 => valor_s1m2_00:00 | ... | 00:20 => valor_s1mC_00:20 |
+|                                           |         ...              |         ...             | ... |         ...             |
+| sensorId = 1DGXXXX2, day = 2013-12-01     | 00:00 => valor_s2m1_00:00  | 00:00 => valor_s2m2_00:00 | ... | 00:00 => valor_s2mC_00:00 |
+|                                           | 00:10 => valor_s2m1_00:10  | 00:10 => valor_s2m2_00:10 | ... | 00:10 => valor_s2mC_00:10 |
+|                                           | 00:20 => valor_s2m1_00:20  | 00:20 => valor_s2m2_00:00 | ... | 00:20 => valor_s2mC_00:20 |
 
-De esta manera, todas las medidas tomadas por el lector1 del sensor 1DGXXXXX, el día 2013-12-01, es almacenada en una sola familia de columna para cada rowId. Siendo necesario leer tan solo dos familias de columnas para extraer toda la información que necesitamos por fila, la general (contiene el sensorId y el día) y la familia de columna correspondiente al C introducido.
+De esta manera, todas las medidas tomadas por el lector1 del sensor 1DGXXXXX, el día 2013-12-01, es almacenada en una sola familia de columna para cada rowId. Siendo necesario leer tan solo dos familias de columnas para extraer toda la información que necesitamos, la general (contiene el sensorId y el día) y la familia de columna correspondiente al C introducido.
 
 #### 1.3 Problemas encontrados.
 
-Esta estrucuta y generaciónde rowId hace necesario ordenar las filas extraidas. Primero por la columna general:sensorId y luego por general:day. Pero, lo bueno que tiene es que no hace lecturas innecesarias.
+Esta estrucuta y, generación de rowId, hace necesario ordenar las filas extraidas. Primero por la columna general:sensorId y luego por general:day. Pero, no hace lecturas innecesarias.
 
 ### 2. Detalle de las herramientas desarrolladas
 
@@ -277,5 +281,5 @@ El código es el siguiente:
 
 El código fuente se encuentra adjunto a este documento y publicado en github:
 
-https://github.com/giffunis/BigDataProject
+[Repositorio en Github - tag:parte1](https://github.com/giffunis/BigDataProject/tree/parte1)
 
