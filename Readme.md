@@ -94,6 +94,7 @@ Para 3 servidores de región:
 La estructura de las familias de columna escogida es la siguiente:
     
 |             general                       |           measure1       |       measure2          |     |          measureC       |
+|-------------------------------------------|--------------------------|-------------------------|-----|-------------------------|
 | sensorId = 1DGXXXXX, day = 2013-12-01     | 00:00 => valor_m1_00:00  | 00:00 => valor_m2_00:00 | ... | 00:00 => valor_mC_00:00 |
 |                                           | 00:10 => valor_m1_00:10  | 00:00 => valor_m2_00:10 | ... | 00:00 => valor_mC_00:10 |
 |                                           | 00:20 => valor_m1_00:20  | 00:00 => valor_m2_00:20 | ... | 00:00 => valor_mC_00:20 |
