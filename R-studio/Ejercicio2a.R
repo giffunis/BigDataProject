@@ -1,4 +1,9 @@
-# load the library first
+# ------------------------------------------------------------------------------
+# jsgifbec
+# Bigdata: Proyecto - Parte 2a
+# ------------------------------------------------------------------------------
+
+# load the libraries first
 library(caret)
 library(randomForest)
 
@@ -34,7 +39,9 @@ min_target <- min(training$nextAverage)
 max_target <- max(training$nextAverage)
 
 # 1. Neuronal Network sin normalizar
-nNFit <- train(nextAverage ~ ., data = training[, 2:146], method = "nnet", linout = TRUE)
+nNFit <- train(nextAverage ~ ., data = training[, 2:146], method = "nnet", linout = TRUE, trace = FALSE)
+               #, tuneGrid = expand.grid(size = c(5, 10), decay = c(0.1, 0.5)))
+
 nNpred <- predict(nNFit, testing)
 
 resultado <- data.frame(
@@ -43,7 +50,8 @@ resultado <- data.frame(
 )
 
 # 2. Neuronal Network con normalización
-nNFitNorm <- train(nextAverage ~ ., data = trainingNorm, method = "nnet", linout = TRUE)
+nNFitNorm <- train(nextAverage ~ ., data = trainingNorm, method = "nnet", linout = TRUE, trace = FALSE)
+                   #, tuneGrid = expand.grid(size = c(5, 10), decay = c(0.1, 0.5)))
 nNpredNorm <- predict(nNFitNorm, testingNorm)
 
 resultadoNorm <- data.frame(
