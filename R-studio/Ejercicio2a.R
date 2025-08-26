@@ -1,5 +1,7 @@
 # load the library first
 library(caret)
+library(randomForest)
+
 set.seed(10)
 
 # Cargamos el dataset desde el fichero
@@ -14,54 +16,52 @@ inTrain <- createDataPartition(data$nextAverage, p = 0.7, list = FALSE)
 training <- data[ inTrain,]
 testing <- data[-inTrain,]
 
+# Aplicar la normalización a los conjuntos de entrenamiento y de test
+preProc <- preProcess(training[, 2:146], method = "range")
+trainingNorm <- predict(preProc, training[, 2:146])
+testingNorm <- predict(preProc, testing[, 2:146])
+
 # Renombramos la última columna de los nuevos dataset
 colnames(training)[1] <- "date"
 colnames(training)[146] <- "nextAverage"
 colnames(testing)[1] <- "date"
 colnames(testing)[146] <- "nextAverage"
-
-# 1. Sin normalizar
-# 1.1 Entrenar el modelo con datos sin normalizar
-nnetFit <- train(nextAverage ~ ., data = training[, 2:146], method = "nnet", linout = TRUE)
-
-# 1.2 Predecimos
-pred <- predict(nnetFit, testing)
-
-# 1.3.Guardamos el resultado
-resultado <- data.frame(
-  Real = testing$nextAverage,
-  PrediccionSinNorm = as.numeric(pred)
-)
-
-# 2. Con normalización
-
-# 2.1 Normalizar los datos (excluyendo la fecha)
-preProc <- preProcess(training[, 2:146], method = "range")
-
-# Aplicar la normalización a los conjuntos de entrenamiento y de test
-trainingNorm <- predict(preProc, training[, 2:146])
-testingNorm <- predict(preProc, testing[, 2:146])
-
-# Renombramos la última columna de los nuevos dataset
 colnames(trainingNorm)[145] <- "nextAverage"
 colnames(testingNorm)[145] <- "nextAverage"
 
-# 2.2 Entrenar el modelo con datos normalizados
-nnetFit <- train(nextAverage ~ ., data = trainingNorm, method = "nnet", linout = TRUE)
-
-# 2.3 Predecimos
-pred <- predict(nnetFit, testingNorm)
-
-# 2.4.Guardamos el resultado
-resultadoNorm <- data.frame(
-  Real = testing$nextAverage,
-  PrediccionNorm = as.numeric(pred)
-)
-
+# calculamos los valores mín y max usados en la normalización
 min_target <- min(training$nextAverage)
 max_target <- max(training$nextAverage)
 
+# 1. Neuronal Network sin normalizar
+nNFit <- train(nextAverage ~ ., data = training[, 2:146], method = "nnet", linout = TRUE)
+nNpred <- predict(nNFit, testing)
+
+resultado <- data.frame(
+  Real = testing$nextAverage,
+  PrediccionSinNorm = as.numeric(nNpred)
+)
+
+# 2. Neuronal Network con normalización
+nNFitNorm <- train(nextAverage ~ ., data = trainingNorm, method = "nnet", linout = TRUE)
+nNpredNorm <- predict(nNFitNorm, testingNorm)
+
+resultadoNorm <- data.frame(
+  PrediccionNorm = as.numeric(nNpredNorm)
+)
+
 resultado$PrediccionConNorm <- resultadoNorm$Prediccion * (max_target - min_target) + min_target
 
+# 3. Random Forest sin normalización
+rfFit <- train(nextAverage ~ ., data = training[, 2:146], method = "rf")
+rFpred <- predict(rfFit, testing[, 2:146])
+resultado$PrediccionRandomForestSinNorm <- as.numeric(rFpred)
 
-View(resultado[, c("Real", "PrediccionSinNorm", "PrediccionConNorm")])
+# 4. Random Forest con normalización
+rfFitNorm <- train(nextAverage ~ ., data = trainingNorm, method = "rf")
+rFpredNorm <- predict(rfFitNorm, testingNorm)
+rFpredNorm <- rFpredNorm * (max_target - min_target) + min_target
+resultado$PrediccionRandomForestConNorm <- as.numeric(rFpredNorm)
+
+# 5. Visualización de los datos
+View(resultado[, c("Real", "PrediccionSinNorm", "PrediccionConNorm", "PrediccionRandomForestSinNorm", "PrediccionRandomForestConNorm")])
