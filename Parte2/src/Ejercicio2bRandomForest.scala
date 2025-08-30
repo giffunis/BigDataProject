@@ -1,8 +1,10 @@
 import org.apache.spark.{ SparkContext, SparkConf, mllib }
 import org.apache.log4j.{ Logger, Level }
 import org.apache.spark.mllib.tree.RandomForest
+import org.apache.spark.mllib.tree.model.RandomForestModel
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.linalg.Vectors
+import java.io._
 
 object Ejercicio2bRandomForest {
   def main(args: Array[String]): Unit = {
@@ -16,10 +18,9 @@ object Ejercicio2bRandomForest {
     val SEED = 10 // Mismo valor que en R
     val TRAINING_PERCENTAGE = 0.7
     val TESTING_PERCENTAGE = 1 - TRAINING_PERCENTAGE
-    val TREES = 20
+    val TREES = 100
     val MAX_DEPTH = 10
-    val SPLITS = 20
-    
+    val SPLITS = 32
 
     disableSparkLoggin()
 
@@ -64,11 +65,23 @@ object Ejercicio2bRandomForest {
       case (pred, label) =>
         println(f"Predicción: $pred%.4f | Valor real: $label%.4f")
     }
+    
+    // Guardamos un árbol generado por el modelo
+    saveTreeModel(model, TREES - 1)
 
   }
 
   def disableSparkLoggin() {
     Logger.getLogger("org").setLevel(Level.WARN)
     Logger.getLogger("akka").setLevel(Level.WARN)
+  }
+
+  def saveTreeModel(model : RandomForestModel, tree : Int) {
+    val arbol = model.trees(tree)
+    val estructura = arbol.toDebugString
+
+    val archivo = new PrintWriter(new File("./salida_parte2/ejercicio2b/modelo_arbol.txt"))
+    archivo.write(estructura)
+    archivo.close()
   }
 }
