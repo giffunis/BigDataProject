@@ -10,8 +10,8 @@ object Ejercicio1 {
     val COL_DATE = COL_SENSOR + 1
     val FIRST_COL_MEASURE = COL_DATE + 1
     val sensorId = "DG1000420"
-    val INPUT_PATH = "./entrada_parte2/output.csv"
-    val OUTPUT_PATH = "./salida_parte2/prediccion.txt"
+    val INPUT_PATH = "./entrada_parte2/ejercicio1/output.csv"
+    val OUTPUT_PATH = "./salida_parte2/ejercicio1/prediccion.txt"
 
     disableSparkLoggin()
 
