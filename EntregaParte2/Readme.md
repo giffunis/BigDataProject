@@ -1,4 +1,4 @@
-<!-- title: BigData - proyecto -->
+<!-- title: BigData - Informe parte 2 -->
 # BigData - Proyecto parte 2
 
 Proyecto asignatura BigData.  
@@ -6,18 +6,20 @@ Máster Universitario en Ingeniería Informática - Universidad Pablo de Olavide
 
 ## Índice del trabajo final - parte2
 
-- [1. Descripción de la entrega](#1-descripcion-de-la-entrega).
-- [2. Comparación de los resultados obtenidos por varias técnicas en el ejercicio 2a](#2-comparacion-de-los-resultados-obtenidos-por-varias-tecnicas-en-el-ejercicio-2a).
-- [3. Análisis del conjunto de datos y de las líneas de distribución obtenidos en el ejercicio 2c](#3-analisis-del-conjunto-de-datos-y-de-las-lineas-de-distribucion-obtenidos-en-el-ejercicio-2c).
-- [4. Modelo de árbol obtenido por Random Forest](#4-modelo-de-arbol-obtenido-por-random-forest).
+- [1. Descripción de la entrega](#1-descripción-de-la-entrega).
+- [2. Comparación de los resultados obtenidos por varias técnicas en el ejercicio 2a](#2-comparación-de-los-resultados-obtenidos-por-varias-técnicas-en-el-ejercicio-2a).
+- [3. Análisis del conjunto de datos y de las líneas de distribución obtenidos en el ejercicio 2c](#3-análisis-del-conjunto-de-datos-y-de-las-líneas-de-distribución-obtenidos-en-el-ejercicio-2c).
+- [4. Modelo de árbol obtenido por Random Forest](#4-modelo-de-árbol-obtenido-por-random-forest).
 
 **Observaciones:** La visualización de los resultados (ejercicio 3). No la he realizado.
+
+[Repositorio en Github - tag:2parte](https://github.com/giffunis/BigDataProject/tree/2parte/EntregaParte2)
 
 ### 1. Descripción de la entrega
 
 - La carpeta `Parte2` es el directorio del proyecto en Scala usado para realizar los ejercicios. Dentro de `Parte2/src` se encuentran las clases que implementados para los apartados correspondientes.
 - La carpeta `R-studio` contiene el ejercicio 2a con los ficheros fuentes de R y la comparativa de predicciones generada.
-- El modelo de árbol obtenido por Random Forest se encuentra en la ruta `Parte2/salida_parte2/ejercicio2b/modelo_arbol.txt`. También en el [punto 5](#5-modelo-de-arbol-obtenido-por-random-forest) de este informe.
+- El modelo de árbol obtenido por Random Forest se encuentra en la ruta `Parte2/salida_parte2/ejercicio2b/modelo_arbol.txt`. También en el [punto 4](#4-modelo-de-árbol-obtenido-por-random-forest) de este informe.
 
 ### 2. Comparación de los resultados obtenidos por varias técnicas en el ejercicio 2a
 
@@ -32,7 +34,7 @@ Se han implementado 2 técnicas de aprendizaje supervisado con 2 variaciones cad
 
 Obteniéndose los siguientes resultados:
 
- <img src="../R-studio/comparativa-de-predicciones.png" width="225" height="500" alt="Login Activity"/>
+ <img src="../R-studio/comparativa-de-predicciones.png" width="600" height="175" alt="Login Activity"/>
     
 ### 3. Análisis del conjunto de datos y de las líneas de distribución obtenidos en el ejercicio 2c
 

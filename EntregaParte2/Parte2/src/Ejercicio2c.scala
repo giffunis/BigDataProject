@@ -42,7 +42,7 @@ object Ejercicio2c {
     val clusters = KMeans.train(measuresRDD, N_CLUSTERS, MAX_ITERATIONS)
 
     //Obtenemos el error
-    val WSSSE = clusters.computeCost(measuresRDD)
+    //val WSSSE = clusters.computeCost(measuresRDD)
 
     // Generamos el conjunto de datos
     val labeledData = dataFiltered.map {
