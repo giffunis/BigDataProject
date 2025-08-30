@@ -1,0 +1,35 @@
+DecisionTreeModel regressor of depth 7 with 23 nodes
+  If (feature 85 <= 75.5099985)
+   If (feature 55 <= 34.1099985)
+    Predict: 66.04624713194445
+   Else (feature 55 > 34.1099985)
+    If (feature 133 <= 55.88999750000001)
+     If (feature 124 <= 54.179998499999996)
+      If (feature 121 <= 48.239998)
+       Predict: 38.71999823611111
+      Else (feature 121 > 48.239998)
+       If (feature 120 <= 52.109997)
+        Predict: 37.391248465277776
+       Else (feature 120 > 52.109997)
+        If (feature 58 <= 37.1699985)
+         Predict: 37.713331611111094
+        Else (feature 58 > 37.1699985)
+         Predict: 37.8899984236111
+     Else (feature 124 > 54.179998499999996)
+      If (feature 142 <= 35.6399995)
+       Predict: 40.57374836805552
+      Else (feature 142 > 35.6399995)
+       Predict: 40.198748097222214
+    Else (feature 133 > 55.88999750000001)
+     Predict: 45.84999813888891
+  Else (feature 85 > 75.5099985)
+   If (feature 2 <= 53.369997)
+    If (feature 95 <= 82.9799955)
+     Predict: 72.14124699999996
+    Else (feature 95 > 82.9799955)
+     If (feature 106 <= 95.489994)
+      Predict: 67.83749686111113
+     Else (feature 106 > 95.489994)
+      Predict: 68.13083040277778
+   Else (feature 2 > 53.369997)
+    Predict: 55.49124752777777
