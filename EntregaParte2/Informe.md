@@ -1,19 +1,17 @@
 <!-- title: BigData - proyecto -->
 # BigData - Proyecto parte 2
 
-Parte 2
 Proyecto asignatura BigData.  
 Máster Universitario en Ingeniería Informática - Universidad Pablo de Olavide  
 
 ## Índice del trabajo final - parte2
 
-**Requisitos obligatorios**
-
 - [1. Descripción de la entrega](#1-descripcion-de-la-entrega).
-- [2. Comparación de los resultados obtenidos por varias técnicas en el ejercicio 2a](#2-detalle-de-las-herramientas-desarrolladas).
-- [3. Comparación, entre el método Neural Network de R y Random Forest de la librería MLlib, de los resultados obtenidos](#3-invocación-de-las-herramientas-de-carga-y-extracción).
-- [4. Análisis del conjunto de datos y de las líneas de distribución obtenidos en el ejercicio 2c](#4-scripts-de-creación-de-tablas-y-limpieza).
-- [5. Modelo de árbol obtenido por Random Forest](#5-modelo-de-arbol-obtenido-por-random-forest).
+- [2. Comparación de los resultados obtenidos por varias técnicas en el ejercicio 2a](#2-comparacion-de-los-resultados-obtenidos-por-varias-tecnicas-en-el-ejercicio-2a).
+- [3. Análisis del conjunto de datos y de las líneas de distribución obtenidos en el ejercicio 2c](#3-analisis-del-conjunto-de-datos-y-de-las-lineas-de-distribucion-obtenidos-en-el-ejercicio-2c).
+- [4. Modelo de árbol obtenido por Random Forest](#4-modelo-de-arbol-obtenido-por-random-forest).
+
+**Observaciones:** La visualización de los resultados (ejercicio 3). No la he realizado.
 
 ### 1. Descripción de la entrega
 
@@ -36,11 +34,19 @@ Obteniéndose los siguientes resultados:
 
  <img src="../R-studio/comparativa-de-predicciones.png" width="225" height="500" alt="Login Activity"/>
     
-### 3. Comparación, entre el método Neural Network de R y Random Forest de la librería MLlib, de los resultados obtenidos
+### 3. Análisis del conjunto de datos y de las líneas de distribución obtenidos en el ejercicio 2c
 
-### 4. Análisis del conjunto de datos y de las líneas de distribución obtenidos en el ejercicio 2c
+La clasificación obtenida se encuentra en el fichero `Parte2/salida_parte2/ejercicio2c/part-00000`. En ella, podemos observar la siguiente distribución:
 
-### 5. Modelo de árbol obtenido por Random Forest
+| Cluster | Registros | Porcentaje |
+| ------- | --------- | ---------- |
+|   0     |   1401    |     25%    |
+|   1     |   1574    |     28%    |
+|   2     |   169     |     3%     |
+|   3     |   1848    |     32%    |
+|   4     |   712     |     12%    |
+
+### 4. Modelo de árbol obtenido por Random Forest
 
     DecisionTreeModel regressor of depth 7 with 23 nodes
       If (feature 85 <= 75.5099985)
