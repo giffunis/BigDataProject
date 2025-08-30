@@ -53,8 +53,7 @@ object Ejercicio2c {
 
     // Guardamos en archivo
     val output = labeledData.map {
-      case (sensor, date, label) =>
-        s"$sensor,$date,$label"
+      case (sensor, date, label) => s"$sensor$CSV_DELIMITER$date$CSV_DELIMITER$label"
     }
 
     output.saveAsTextFile(OUTPUT_PATH)
